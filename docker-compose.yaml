@@ -1,0 +1,65 @@
+version: '3.7'
+
+#networks
+networks:
+    #internal network
+    internal:
+      driver: bridge
+
+    reverse-proxy:
+      external:
+        name: reverse-proxy
+
+#volumes
+volumes:
+  #volume nginx
+  volume-nginx_data:
+    driver: local
+
+services:
+  nginx-proxy:
+    container_name: nginx-proxy
+    image: nginxproxy/nginx-proxy
+    ports:
+      - "80:80"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    networks:
+      - reverse-proxy
+      - internal
+    
+
+  node-app:
+    container_name: node-app
+    image: luanleiteti/simple-chat:v4
+    expose:
+      - 3000
+    environment:
+      - DB_CONECT_MONGO=${DB_CONECT_MONGO}
+      - VIRTUAL_HOST=simple-chat.local
+      - VIRTUAL_PORT=3000
+    networks:
+      - internal
+    ports:
+      - "3000:3000"
+    links:
+      - mongo-app
+    depends_on: 
+      - mongo-app
+  
+  mongo-app:
+    container_name: mongo-app
+    image: mongo:5.0.5
+
+    restart: always
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=SPFC2metron
+    ports:
+      - "27017:27017"
+    networks:
+      - internal
+    volumes:
+      - ./dbdata:/data/db
+    
+
