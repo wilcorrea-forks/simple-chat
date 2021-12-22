@@ -21,7 +21,7 @@ services:
 
   node-simplechat:
     container_name: node-simplechat
-    image: luanleiteti/simple-chat:v4
+    image: devitools/node:12
     environment:
       - VIRTUAL_HOST=simplechat.local
       - VIRTUAL_PORT=3000
@@ -31,11 +31,17 @@ services:
       - MONGO_PASSWORD=${MONGO_PASSWORD}
     networks:
       - internal
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: bash -c "npm install && npm run start"
     restart: on-failure
     depends_on: 
       - mongo-simplechat
     expose:
       - "3000"
+    ports:
+      - "3000:3000"
   
   mongo-simplechat:
     container_name: mongo-simplechat
@@ -49,3 +55,5 @@ services:
       - mongo-simplechat_volume:/data/db
     expose:
       - "27017"
+    ports:
+      - "27017:27017"

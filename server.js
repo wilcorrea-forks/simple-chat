@@ -1,70 +1,80 @@
-var express = require('express');
-var bodyParser = require('body-parser')
-var app = express();
-var http = require('http').Server(app);
-var io = require('socket.io')(http);
-var mongoose = require('mongoose');
+const express = require('express')
+const bodyParser = require('body-parser')
+const app = express()
+const http = require('http').Server(app)
+const io = require('socket.io')(http)
+const mongoose = require('mongoose')
 
-app.use(express.static(__dirname));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({extended: false}))
+app.use(express.static(__dirname))
+app.use(bodyParser.json())
+app.use(bodyParser.urlencoded({ extended: false }))
 
-var Message = mongoose.model('Message',{
-  name : String,
-  message : String
+const Message = mongoose.model('Message', {
+  name: String,
+  message: String
 })
-
-var dbUrl = process.env.DB_CONECT_MONGO
 
 app.get('/messages', (req, res) => {
-  Message.find({},(err, messages)=> {
-    res.send(messages);
+  Message.find({}, (err, messages) => {
+    res.send(messages)
   })
 })
-
 
 app.get('/messages/:user', (req, res) => {
-  var user = req.params.user
-  Message.find({name: user},(err, messages)=> {
-    res.send(messages);
+  const user = req.params.user
+  Message.find({ name: user }, (err, messages) => {
+    res.send(messages)
   })
 })
 
-
 app.post('/messages', async (req, res) => {
-  try{
-    var message = new Message(req.body);
+  try {
+    const message = new Message(req.body)
 
-    var savedMessage = await message.save()
-      console.log('saved');
+    const savedMessage = await message.save()
+    console.log('saved')
 
-    var censored = await Message.findOne({message:'badword'});
-      if(censored)
-        await Message.remove({_id: censored.id})
-      else
-        io.emit('message', req.body);
-      res.sendStatus(200);
-  }
-  catch (error){
-    res.sendStatus(500);
-    return console.log('error',error);
-  }
-  finally{
+    const censored = await Message.findOne({ message: 'badword' })
+    if (censored)
+      await Message.remove({ _id: censored.id })
+    else
+      io.emit('message', req.body)
+    res.sendStatus(200)
+  } catch (error) {
+    res.sendStatus(500)
+    return console.log('error', error)
+  } finally {
     console.log('Message Posted')
   }
-
 })
 
+const options = {
+  poolSize: 10,
+  authSource: 'admin',
+  user: process.env.MONGO_USERNAME,
+  pass: process.env.MONGO_PASSWORD,
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  useCreateIndex: true,
+  useFindAndModify: false,
+}
 
+const host = process.env.MONGO_HOST
+const database = process.env.MONGO_DATABASE
+const callback = (err) => {
+  if (err) {
+    console.log('mongoose: mongodb error', err)
+    process.exit(1)
+    return
+  }
+  console.log('mongoose: mongodb connected')
+}
+mongoose.connect(`mongodb://${host}/${database}`, options, callback)
 
-io.on('connection', () =>{
+io.on('connection', () => {
   console.log('a user is connected')
 })
 
-mongoose.connect(dbUrl ,{useNewUrlParser: true} ,(err) => {
-  console.log('mongodb connected',err);
+const server = http.listen(3000, () => {
+  console.log('server is running on port', server.address().port)
 })
-
-var server = http.listen(3000, () => {
-  console.log('server is running on port', server.address().port);
-});
